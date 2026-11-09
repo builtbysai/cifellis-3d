@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cifelli's Pizza — 3D Pizza Shop · Lindenwold, NJ</title>
-<meta name="description" content="A 3D pizza shop you can walk around: Cifelli's Pizza, 700 Chews Landing Road, Lindenwold, NJ. Menu, oven, visit — and a secret after dark.">
+<meta name="description" content="A 3D pizza shop after dark: Cifelli's Pizza, 700 Chews Landing Road, Lindenwold, NJ. Menu, oven, visit — under the neon.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -13,7 +13,7 @@
     --ink:#241a12; --panel:rgba(20,14,10,.86); --gold:#f2c14e;
   }
   *{box-sizing:border-box; margin:0; padding:0}
-  html,body{height:100%; overflow:hidden; background:#1a130d;
+  html,body{height:100%; overflow:hidden; background:#000;
     font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; color:#fff}
   #scene{position:fixed; inset:0; display:block; touch-action:none; cursor:grab}
   #scene.dragging{cursor:grabbing}
@@ -131,7 +131,7 @@
 <div class="topbar">
   <div class="brand">CIFELLI'S<small>Pizza · Lindenwold, NJ</small></div>
   <div class="top-actions">
-    <button class="chip" id="nightBtn" title="After dark">🌙 Night</button>
+    <button class="chip" id="nightBtn" title="Daylight">☀️ Day</button>
     <a class="chip" href="https://www.cifellis.com/" target="_blank" rel="noopener">cifellis.com ↗</a>
   </div>
 </div>
@@ -143,7 +143,7 @@
   <button data-station="oven">🔥 The Oven</button>
   <button data-station="visit">📍 Visit</button>
   <button data-station="roof">🏠 Rooftop</button>
-  <button data-station="back" class="back" id="backBtn" hidden>← Back to the street</button>
+  <button data-station="back" class="back" id="backBtn" hidden>← Back</button>
 </nav>
 
 <aside class="panel" id="menuPanel" aria-label="Menu">
@@ -201,7 +201,7 @@
 <div class="start" id="start">
   <div class="kicker">Lindenwold · New Jersey</div>
   <h1>CIFELLI'S<br><em>PIZZA</em></h1>
-  <p class="tag">A 3D pizza shop you can walk around. <b>Menu, oven, and a secret after dark.</b><br>700 Chews Landing Road · (856) 435-8799</p>
+  <p class="tag">A 3D pizza shop you can walk around — after dark, under the neon. <b>Menu, oven, and four lanterns.</b><br>700 Chews Landing Road · (856) 435-8799</p>
   <button class="enter" id="enterBtn">Enter the shop →</button>
   <p class="fine">A fresh 3D tribute built with Three.js, inspired by Ariyan Molazem's 3D burger-shop portfolio. Not affiliated with Cifelli's — order the real thing at <a href="https://www.cifellis.com/" target="_blank" rel="noopener">cifellis.com</a>.</p>
 </div>
@@ -53267,24 +53267,28 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFSoftShadowMap;
 renderer.toneMapping = ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.06;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new Scene();
-scene.background = new Color(0xbcd7e6);
-scene.fog = new Fog(0xbcd7e6, 55, 110);
+scene.background = new Color(0x000000);
+scene.fog = new Fog(0x000000, 45, 110);
 
-const camera = new PerspectiveCamera(42, 1, 0.1, 300);
+const camera = new PerspectiveCamera(25, 1, 0.1, 300);
 const isMobile = matchMedia('(max-width: 640px)').matches;
 const portrait = innerWidth < innerHeight;
-if (portrait) camera.fov = 55;
+if (portrait) camera.fov = 32;
+// hero: straight-on frontal, eye-level, close-medium — the shop fills ~75% of frame width.
+// shop is 16 wide, ~7.3 tall; at fov 25 the visible height at distance d is 0.443*d.
 const OVERVIEW = portrait
-  ? { pos: [22, 11, 36], tgt: [0, 3, 0] }
+  ? { pos: [2, 4.2, 30], tgt: [0, 3.0, 2] }
   : isMobile
-    ? { pos: [19, 9.5, 30], tgt: [0, 3, 0] }
-    : { pos: [15, 7.5, 24], tgt: [0, 3, 0] };
-camera.position.set(-30, 26, 42);
+    ? { pos: [2.5, 4.5, 32], tgt: [0, 3.8, 0] }
+    : { pos: [3, 4.8, 31], tgt: [0, 3.7, 0] };
+// camera starts tight on the neon sign; Enter pulls back to the hero framing
+camera.position.set(1.2, 5.6, 10.5);
 
-const sun = new DirectionalLight(0xfff1d6, 2.6);
+// night-first lighting: dim cool moon for shape, warm interior + neon do the work
+const sun = new DirectionalLight(0xfff1d6, 0.12);
 sun.position.set(18, 26, 14);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -53292,11 +53296,28 @@ sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
 sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
 sun.shadow.camera.far = 80; sun.shadow.bias = -0.0004;
 scene.add(sun);
-const hemi = new HemisphereLight(0xcfe4f5, 0x8a6f52, 0.9);
+const hemi = new HemisphereLight(0x2a3648, 0x0b0806, 0.35);
 scene.add(hemi);
-const moon = new DirectionalLight(0x93a7ff, 0);
+const moon = new DirectionalLight(0x93a7ff, 0.55);
 moon.position.set(-14, 22, -10);
 scene.add(moon);
+// warm spotlight pool over the shop — the stage light (aimed low, at the
+// counter and the floor in front, so the facade stays low-key and the neon leads)
+const spot = new SpotLight(0xffe9c4, 260, 70, 0.5, 0.9, 1.4);
+spot.position.set(3, 17, 19);
+spot.target.position.set(0, 0.3, 8);
+spot.castShadow = true;
+spot.shadow.mapSize.set(1024, 1024);
+spot.shadow.bias = -0.0004;
+scene.add(spot, spot.target);
+// red neon spill from the sign
+const neonGlow = new PointLight(0xff2a1a, 26, 20, 1.8);
+neonGlow.position.set(0, 5.4, 8.5);
+scene.add(neonGlow);
+// warm interior spill through the window
+const interiorGlow = new PointLight(0xffb45e, 14, 12, 1.7);
+interiorGlow.position.set(-3.75, 2.6, 6.8);
+scene.add(interiorGlow);
 
 /* ---------------- tiny tween engine (wall-clock: completes in real time even at low fps) ---------------- */
 const tweens = [];
@@ -53399,7 +53420,7 @@ const roundSignTex = ctex(512, 512, (g, w, h) => {
   g.strokeStyle = '#e23a28'; g.lineWidth = 22;
   g.beginPath(); g.arc(256, 256, 228, 0, Math.PI * 2); g.stroke();
   g.fillStyle = '#e23a28';
-  g.font = 'italic 900 84px Georgia, serif';
+  g.font = 'italic 900 96px Georgia, serif';
   g.textAlign = 'center';
   g.fillText("Cifelli's", 256, 210);
   g.font = '900 120px "Bebas Neue", Impact, sans-serif';
@@ -53469,7 +53490,7 @@ const posterTex = ctex(512, 768, (g, w, h) => {
   g.fillStyle = '#f6ead2'; g.fillRect(0, 0, w, h);
   g.fillStyle = '#c0392b'; g.fillRect(0, 0, w, 150);
   g.fillStyle = '#f6ead2'; g.textAlign = 'center';
-  g.font = '900 74px "Bebas Neue", Impact, sans-serif';
+  g.font = '900 54px "Bebas Neue", Impact, sans-serif';
   g.fillText("CIFELLI'S PIZZA", w / 2, 100);
   g.fillStyle = '#241a12'; g.textAlign = 'left';
   g.font = '800 40px Inter, sans-serif';
@@ -53499,7 +53520,7 @@ const M = {
   trim: new MeshStandardMaterial({ color: 0xf6ead2, roughness: 0.8 }),
   roof: new MeshStandardMaterial({ color: 0x3a3230, roughness: 1 }),
   metal: new MeshStandardMaterial({ color: 0x9a938a, roughness: 0.6, metalness: 0.4 }),
-  glass: new MeshStandardMaterial({ color: 0x9fc4d4, roughness: 0.15, metalness: 0.4, transparent: true, opacity: 0.45 }),
+  glass: new MeshStandardMaterial({ color: 0xcfd8d2, roughness: 0.15, metalness: 0.4, transparent: true, opacity: 0.15 }),
   doorFrame: new MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 }),
   wood: new MeshStandardMaterial({ color: 0x8a5a2e, roughness: 0.85 }),
   woodDark: new MeshStandardMaterial({ color: 0x5d3a1a, roughness: 0.9 }),
@@ -53531,22 +53552,21 @@ function cyl(rt, rb, h, mat, x = 0, y = 0, z = 0, seg = 24) {
   return m;
 }
 
-/* ---------------- ground / street ---------------- */
-const ground = new Mesh(new PlaneGeometry(120, 120), new MeshStandardMaterial({ color: 0x8f9a7a, roughness: 1 }));
+/* ---------------- ground: a dark stage, not a street ---------------- */
+const ground = new Mesh(new PlaneGeometry(140, 140), new MeshStandardMaterial({ color: 0x060505, roughness: 0.95 }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
 scene.add(ground);
-
-const walk = new Mesh(new PlaneGeometry(46, 14), M.sidewalk);
-walk.rotation.x = -Math.PI / 2; walk.position.set(0, 0.02, 9);
-walk.receiveShadow = true; scene.add(walk);
-
-const road = new Mesh(new PlaneGeometry(120, 8), M.road);
-road.rotation.x = -Math.PI / 2; road.position.set(0, 0.03, 18);
-road.receiveShadow = true; scene.add(road);
-for (let x = -55; x <= 55; x += 8) {
-  const dash = box(3.4, 0.02, 0.28, new MeshStandardMaterial({ color: 0xf2c14e }), x, 0.05, 18, false);
-  scene.add(dash);
-}
+// soft warm pool of light under the shop (radial gradient, fades to black)
+const poolTex = ctex(512, 512, (g, w, h) => {
+  const grad = g.createRadialGradient(256, 256, 20, 256, 256, 250);
+  grad.addColorStop(0, 'rgba(255,236,200,0.55)');
+  grad.addColorStop(0.35, 'rgba(255,220,170,0.25)');
+  grad.addColorStop(1, 'rgba(255,220,170,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, w, h);
+});
+const pool = new Mesh(new PlaneGeometry(30, 24), new MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false }));
+pool.rotation.x = -Math.PI / 2; pool.position.set(0, 0.02, 4);
+scene.add(pool);
 
 /* ---------------- the shop ---------------- */
 const shop = new Group();
@@ -53568,7 +53588,7 @@ signBoard.position.set(0, 5.45, 5.12);
 shop.add(signBoard);
 
 // front window (left) with warm interior
-const winGlowMat = new MeshStandardMaterial({ color: 0x2a1a10, emissive: 0xffb45e, emissiveIntensity: 0.85, roughness: 0.4 });
+const winGlowMat = new MeshStandardMaterial({ color: 0x2a1a10, emissive: 0xff8c1a, emissiveIntensity: 0.7, roughness: 0.4 });
 const winGlow = new Mesh(new PlaneGeometry(5.4, 2.7), winGlowMat);
 winGlow.position.set(-3.75, 2.65, 5.02); shop.add(winGlow);
 const winGlass = new Mesh(new PlaneGeometry(5.4, 2.7), M.glass);
@@ -53597,6 +53617,10 @@ shop.add(box(0.16, 3.9, 0.14, M.doorFrame, 2.23, 1.95, 5.04));
 shop.add(box(0.16, 3.9, 0.14, M.doorFrame, 4.97, 1.95, 5.04));
 const doorGlass = new Mesh(new PlaneGeometry(2.4, 3.4), M.glass);
 doorGlass.position.set(3.6, 1.95, 5.12); shop.add(doorGlass);
+// warm glow behind the door glass so the door reads as a lit interior, like the window
+const doorGlowMat = new MeshStandardMaterial({ color: 0x2a1a10, emissive: 0xff8c1a, emissiveIntensity: 0.5, roughness: 0.4 });
+const doorGlow = new Mesh(new PlaneGeometry(2.4, 3.4), doorGlowMat);
+doorGlow.position.set(3.6, 1.95, 5.02); shop.add(doorGlow);
 shop.add(box(0.1, 3.4, 0.06, M.doorFrame, 3.6, 1.95, 5.14));
 shop.add(box(2.4, 0.12, 0.06, M.doorFrame, 3.6, 1.9, 5.14));
 const doorHandle = cyl(0.05, 0.05, 0.7, M.iron, 4.6, 1.8, 5.2, 10);
@@ -53634,11 +53658,25 @@ function lantern(x, y, z, ry) {
 }
 lantern(-7.7, 4.5, 5.15, 0); lantern(7.7, 4.5, 5.15, 0);
 lantern(-7.7, 4.5, -5.15, Math.PI); lantern(7.7, 4.5, -5.15, Math.PI);
+// night is the default look, so the lanterns start lit
+lanterns.forEach(l => l.userData.lit = true);
 
-/* ---- oven on the +X wall: dark opening, glowing mouth inside ---- */
+/* ---- oven on the +X wall: dark opening, glowing fire at the bottom ---- */
 const ovenFrame = box(0.3, 2.2, 3.0, new MeshStandardMaterial({ color: 0x241a12, roughness: 1 }), 8.02, 1.9, -1);
 shop.add(ovenFrame);
-const ovenGlowMat = new MeshStandardMaterial({ color: 0x1a0d05, emissive: 0xff6a1a, emissiveIntensity: 1.2 });
+const ovenMouthTex = ctex(256, 192, (g, w, h) => {
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#160b04');
+  grad.addColorStop(0.45, '#3a1503');
+  grad.addColorStop(0.75, '#ff7a22');
+  grad.addColorStop(1, '#ffc46a');
+  g.fillStyle = grad; g.fillRect(0, 0, w, h);
+  const core = g.createRadialGradient(w / 2, h * 0.85, 4, w / 2, h * 0.85, 90);
+  core.addColorStop(0, 'rgba(255,220,140,0.95)');
+  core.addColorStop(1, 'rgba(255,122,34,0)');
+  g.fillStyle = core; g.fillRect(0, 0, w, h);
+});
+const ovenGlowMat = new MeshStandardMaterial({ color: 0x1a0d05, map: ovenMouthTex, emissive: 0xffffff, emissiveMap: ovenMouthTex, emissiveIntensity: 1.2 });
 const ovenMouth = new Mesh(new PlaneGeometry(2.0, 1.5), ovenGlowMat);
 ovenMouth.position.set(8.2, 1.75, -1); ovenMouth.rotation.y = Math.PI / 2;
 shop.add(ovenMouth);
@@ -53655,10 +53693,14 @@ peel.userData = { action: 'peel' };
 scene.add(peel);
 
 /* ---- visit poster on the -X wall ---- */
-const poster = new Mesh(new PlaneGeometry(2.6, 3.9), new MeshStandardMaterial({ map: posterTex, roughness: 0.85 }));
+const poster = new Mesh(new PlaneGeometry(2.6, 3.9), new MeshStandardMaterial({ map: posterTex, emissive: 0xffffff, emissiveMap: posterTex, emissiveIntensity: 0.15, roughness: 0.85 }));
 poster.position.set(-8.13, 2.7, 1); poster.rotation.y = -Math.PI / 2;
 shop.add(poster);
 shop.add(box(0.1, 4.1, 2.8, M.woodDark, -8.07, 2.7, 1));
+// small warm lamp light so the poster reads after dark
+const posterLight = new PointLight(0xffc98a, 5, 7, 1.8);
+posterLight.position.set(-9.6, 2.8, 1);
+scene.add(posterLight);
 
 /* ---------------- pizza builder ---------------- */
 const PEP_SPOTS = [
@@ -53716,7 +53758,7 @@ scene.add(bench);
 
 // A-frame menu board
 const board = new Group();
-board.position.set(-7.6, 0, 8.6); board.rotation.y = 0.5;
+board.position.set(-6.2, 0, 9.8); board.rotation.y = 0.5;
 const boardFace = new Mesh(new PlaneGeometry(1.7, 2.1), new MeshStandardMaterial({ map: chalkTex, roughness: 0.9 }));
 boardFace.position.set(0, 1.25, 0.06);
 const boardBack = box(1.8, 2.2, 0.08, M.woodDark, 0, 1.25, 0);
@@ -53739,7 +53781,7 @@ scene.add(lampLight);
 
 // checkered table + pizza boxes
 const table = new Group();
-table.position.set(6.9, 0, 7.6); table.rotation.y = -0.35;
+table.position.set(5.8, 0, 8.2); table.rotation.y = -0.35;
 table.add(box(2.6, 0.1, 1.6, new MeshStandardMaterial({ map: checkerTex, roughness: 0.9 }), 0, 0.78, 0));
 table.add(box(2.4, 0.06, 1.4, M.woodDark, 0, 0.7, 0));
 for (const [lx, lz] of [[-1.1, -0.6], [1.1, -0.6], [-1.1, 0.6], [1.1, 0.6]])
@@ -53750,22 +53792,8 @@ pizzaBox2.rotation.y = 0.22;
 table.add(pizzaBox1, pizzaBox2);
 scene.add(table);
 
-// trees
-function tree(x, z, s = 1) {
-  const g = new Group(); g.position.set(x, 0, z); g.scale.setScalar(s);
-  g.add(cyl(0.16, 0.24, 2.2, M.trunk, 0, 1.1, 0, 8));
-  const f1 = new Mesh(new SphereGeometry(1.35, 12, 10), M.leaf);
-  f1.position.set(0, 3.1, 0); f1.castShadow = true;
-  const f2 = new Mesh(new SphereGeometry(0.95, 12, 10), M.leaf2);
-  f2.position.set(0.7, 2.5, 0.4); f2.castShadow = true;
-  const f3 = new Mesh(new SphereGeometry(0.8, 12, 10), M.leaf2);
-  f3.position.set(-0.65, 2.6, -0.35); f3.castShadow = true;
-  g.add(f1, f2, f3);
-  scene.add(g);
-}
-tree(-11.5, 4.5, 1.15);
-tree(11.8, -3.5, 0.95);
-tree(-13.5, -6.5, 0.85);
+/* trees removed in the night rebuild: the shop stands alone in the void,
+   framed by the lamp, bench, board and table instead of suburban trees */
 
 /* ---------------- sky extras: stars, fireflies, smoke, moon ---------------- */
 const starGeo = new BufferGeometry();
@@ -53777,7 +53805,14 @@ const starGeo = new BufferGeometry();
   }
   starGeo.setAttribute('position', new Float32BufferAttribute(pts, 3));
 }
-const starMat = new PointsMaterial({ color: 0xffffff, size: 1.8, transparent: true, opacity: 0, sizeAttenuation: false });
+const dotTex = ctex(64, 64, (g, w, h) => {
+  const grad = g.createRadialGradient(32, 32, 1, 32, 32, 30);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, w, h);
+});
+const starMat = new PointsMaterial({ color: 0xffffff, size: 1.8, map: dotTex, transparent: true, opacity: 0, sizeAttenuation: false, depthWrite: false });
 scene.add(new Points(starGeo, starMat));
 
 const fireflyGeo = new BufferGeometry();
@@ -53790,7 +53825,7 @@ const fireflyBase = [];
   }
   fireflyGeo.setAttribute('position', new Float32BufferAttribute(pts, 3));
 }
-const fireflyMat = new PointsMaterial({ color: 0xd8ff9a, size: 0.22, transparent: true, opacity: 0 });
+const fireflyMat = new PointsMaterial({ color: 0xd8ff9a, size: 0.22, map: dotTex, transparent: true, opacity: 0, depthWrite: false });
 const fireflies = new Points(fireflyGeo, fireflyMat);
 scene.add(fireflies);
 
@@ -53810,13 +53845,13 @@ for (let i = 0; i < 12; i++) {
 const orbit = {
   target: new Vector3(...OVERVIEW.tgt),
   theta: Math.atan2(OVERVIEW.pos[0] - OVERVIEW.tgt[0], OVERVIEW.pos[2] - OVERVIEW.tgt[2]),
-  phi: 1.15,
+  phi: Math.acos((OVERVIEW.pos[1] - OVERVIEW.tgt[1]) / Math.hypot(OVERVIEW.pos[0] - OVERVIEW.tgt[0], OVERVIEW.pos[1] - OVERVIEW.tgt[1], OVERVIEW.pos[2] - OVERVIEW.tgt[2])),
   radius: Math.hypot(OVERVIEW.pos[0], OVERVIEW.pos[1] - OVERVIEW.tgt[1], OVERVIEW.pos[2]),
   goalTheta: 0, goalPhi: 1.15, goalRadius: 0, goalTarget: new Vector3(...OVERVIEW.tgt),
   locked: true,
 };
 orbit.goalTheta = orbit.theta;
-orbit.goalTheta = orbit.theta;
+orbit.goalPhi = orbit.phi;
 orbit.goalRadius = orbit.radius;
 // camera starts high and wide; Enter flies it to the overview
 camera.lookAt(orbit.target);
@@ -53841,7 +53876,7 @@ canvas.addEventListener('pointermove', e => {
   lastX = e.clientX; lastY = e.clientY;
   moved += Math.abs(dx) + Math.abs(dy);
   orbit.goalTheta -= dx * 0.005;
-  orbit.goalPhi = Math.max(0.25, Math.min(1.5, orbit.goalPhi - dy * 0.004));
+  orbit.goalPhi = Math.max(0.8, Math.min(1.58, orbit.goalPhi - dy * 0.004));
 });
 function endDrag(e) {
   dragging = false; canvas.classList.remove('dragging');
@@ -53852,12 +53887,12 @@ canvas.addEventListener('pointercancel', () => { dragging = false; });
 canvas.addEventListener('wheel', e => {
   if (orbit.locked) return;
   e.preventDefault();
-  orbit.goalRadius = Math.max(9, Math.min(55, orbit.goalRadius * (1 + Math.sign(e.deltaY) * 0.09)));
+  orbit.goalRadius = Math.max(12, Math.min(48, orbit.goalRadius * (1 + Math.sign(e.deltaY) * 0.09)));
 }, { passive: false });
 canvas.addEventListener('touchmove', e => {
   if (e.touches.length === 2) {
     const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    if (pinchD) orbit.goalRadius = Math.max(9, Math.min(55, orbit.goalRadius * (pinchD / d)));
+    if (pinchD) orbit.goalRadius = Math.max(12, Math.min(48, orbit.goalRadius * (pinchD / d)));
     pinchD = d;
   }
 }, { passive: true });
@@ -53913,11 +53948,13 @@ function tossPizza(pizza, r) {
 }
 
 /* ---------------- stations ---------------- */
+/* stations are single-object portraits: straight-on, eye-level, close-medium,
+   centred, dark floor pool as a stage. Rooftop is the named aerial overview. */
 const STATIONS = {
-  menu: { pos: [0, 4.2, 19.5], tgt: [0, 3.6, 5], panel: 'menuPanel' },
-  oven: { pos: [21, 5, -1], tgt: [8, 2.4, -1], panel: 'ovenPanel' },
-  visit: { pos: [-15.5, 3.4, 7.5], tgt: [-8, 2.6, 1], panel: 'visitPanel' },
-  roof: { pos: [2, 30, 12], tgt: [0, 0, 0], panel: null },
+  menu: { pos: [0, 4.2, 27], tgt: [0, 3.9, 5], panel: 'menuPanel' },
+  oven: { pos: [20, 2.2, -1], tgt: [8.2, 2.0, -1], panel: 'ovenPanel' },
+  visit: { pos: [-20, 2.6, 1], tgt: [-8.1, 2.6, 1], panel: 'visitPanel' },
+  roof: { pos: [15, 21, 15], tgt: [0, 1, 0], panel: null },
 };
 /* on a portrait phone, pull station cameras back so the shop fits the narrow frame */
 function fitStation(st) {
@@ -53950,11 +53987,10 @@ function flyTo(pos, tgt, dur, done) {
   orbit.locked = true;
   const p0 = camera.position.clone(), t0 = orbit.target.clone();
   const p1 = new Vector3(...pos), t1 = new Vector3(...tgt);
-  addTween(dur, k => {
-    camera.position.lerpVectors(p0, p1, k);
-    orbit.target.lerpVectors(t0, t1, k);
-    camera.lookAt(orbit.target);
-  }, () => {
+  // two-step dolly: swing out to a far point first, then glide in close
+  const pFar = t1.clone().add(p1.clone().sub(t1).multiplyScalar(1.45));
+  const tFar = t1.clone().lerp(t0, 0.25);
+  const finish = () => {
     orbit.target.copy(t1);
     orbit.radius = camera.position.distanceTo(t1);
     orbit.theta = Math.atan2(camera.position.x - t1.x, camera.position.z - t1.z);
@@ -53963,6 +53999,17 @@ function flyTo(pos, tgt, dur, done) {
     orbit.goalTarget.copy(t1);
     orbit.locked = false;
     done && done();
+  };
+  addTween(dur * 0.45, k => {
+    camera.position.lerpVectors(p0, pFar, k);
+    orbit.target.lerpVectors(t0, tFar, k);
+    camera.lookAt(orbit.target);
+  }, () => {
+    addTween(dur * 0.55, k => {
+      camera.position.lerpVectors(pFar, p1, k);
+      orbit.target.lerpVectors(tFar, t1, k);
+      camera.lookAt(orbit.target);
+    }, finish);
   });
 }
 function goStation(name) {
@@ -53991,10 +54038,10 @@ document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click
 }));
 document.getElementById('tossBtn').addEventListener('click', () => tossPizza(peelPizza, 0.52));
 
-/* ---------------- the secret: lanterns → after dark ---------------- */
-let night = false, nightMix = 0, nightTween = null;
-const daySky = new Color(0xbcd7e6), nightSky = new Color(0x0c1424);
-const dayFog = new Color(0xbcd7e6), nightFog = new Color(0x0c1424);
+/* ---------------- after dark is the default look ---------------- */
+let night = true, nightMix = 1, nightTween = null;
+const daySky = new Color(0xbcd7e6), nightSky = new Color(0x000000);
+const dayFog = new Color(0xbcd7e6), nightFog = new Color(0x000000);
 function setNight(on, announce = true) {
   if (night === on) return;
   night = on;
@@ -54009,13 +54056,8 @@ function toggleLantern(node) {
   const lit = lanterns.filter(l => l.userData.lit).length;
   pop();
   if (node.userData.lit && lit < 4) toast(`Lantern lit — ${lit} of 4.`);
-  if (lit === 4 && !night) {
-    toast('All four lanterns lit — you found the secret. 🌙', 4600);
-    setNight(true, false);
-  } else if (lit < 4 && night) {
-    setNight(false, false);
-    toast('A lantern went out — daylight returns.');
-  }
+  else if (node.userData.lit && lit === 4) { ding(); toast('All four lanterns lit — the neon burns brightest.', 4200); }
+  else toast(`A lantern went out — ${lit} of 4 lit.`);
 }
 document.getElementById('nightBtn').addEventListener('click', () => {
   setNight(!night);
@@ -54103,11 +54145,12 @@ function animate() {
   const nm = nightMix;
   scene.background.lerpColors(daySky, nightSky, nm);
   scene.fog.color.lerpColors(dayFog, nightFog, nm);
-  sun.intensity = 2.6 * (1 - nm) + 0.12 * nm;
+  sun.intensity = 2.6 * (1 - nm) + 0.05 * nm;
   sun.color.setHex(nm > 0.5 ? 0x93a7ff : 0xfff1d6);
-  hemi.intensity = 0.9 * (1 - nm) + 0.22 * nm;
+  hemi.intensity = 0.9 * (1 - nm) + 0.14 * nm;
   moon.intensity = 0.55 * nm;
-  winGlowMat.emissiveIntensity = 0.85 + nm * 1.7;
+  winGlowMat.emissiveIntensity = 0.7 + nm * 0.7;
+  doorGlowMat.emissiveIntensity = 0.5 + nm * 0.5;
   stringMat.emissiveIntensity = 0.25 + nm * 2.4;
   lanternGlassMat.emissiveIntensity = 0.15 + nm * 1.6;
   starMat.opacity = nm * 0.9;
@@ -54115,13 +54158,19 @@ function animate() {
   lampLight.intensity = nm * 22;
   moonDisc.material.opacity = nm * 0.95;
   moonDisc.lookAt(camera.position);
+  // stage lighting: strong warm pool + neon spill at night, gentle fill by day
+  spot.intensity = 25 + nm * 235;
+  neonGlow.intensity = 2 + nm * 24;
+  interiorGlow.intensity = 2 + nm * 6;
+  posterLight.intensity = 1 + nm * 4;
+  pool.material.opacity = 0.5 + nm * 0.5;
 
   renderer.render(scene, camera);
 }
 animate();
 
 /* tiny hook for automated checks (harmless in production) */
-window.__cifellis = { get locked() { return orbit.locked; }, get station() { return station; }, get night() { return night; }, get nightMix() { return nightMix; } };
+window.__cifellis = { get locked() { return orbit.locked; }, get station() { return station; }, get night() { return night; }, get nightMix() { return nightMix; }, get fov() { return camera.fov; }, get camPos() { return camera.position.toArray(); }, get camTgt() { return orbit.target.toArray(); } };
 
 </script>
 </body>
