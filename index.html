@@ -15,7 +15,13 @@
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%; overflow:hidden; background:#000;
     font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; color:#fff}
-  #scene{position:fixed; inset:0; display:block; touch-action:none; cursor:grab}
+  /* Explicit width/height: a <canvas> is a replaced element, so with only
+     inset:0 its used size falls back to its intrinsic (drawing-buffer)
+     size. At devicePixelRatio 2 the buffer is 2x the viewport, so the
+     canvas laid out 2x too big and only its top-left quarter showed —
+     the shop looked low and cut on a real phone while headless DPR-1
+     tests passed by coincidence (buffer == viewport there). */
+  #scene{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab}
   #scene.dragging{cursor:grabbing}
   #scene.pick{cursor:pointer}
 
@@ -104,13 +110,16 @@
     border-radius:999px; box-shadow:0 12px 34px rgba(192,57,43,.5)}
   .enter:hover{background:#d84a35}
 
-  @media (max-width:640px){
+  /* Mobile layout breakpoint is 900px, not 640px: a real phone's CSS
+     viewport can be ~886px wide (Pixel 10a in-app browser), so at 640px
+     the phone got the desktop side panels and full-size nav pills. */
+  @media (max-width:900px){
     .brand{font-size:23px}
     .brand small{display:none}
     .chip{padding:7px 10px; font-size:12px}
     .hint{bottom:78px; font-size:11.5px}
-    .nav{bottom:12px; gap:2px; padding:5px; max-width:calc(100vw - 16px); overflow-x:auto}
-    .nav button{padding:8px 6px; font-size:12px}
+    .nav{bottom:12px; gap:2px; padding:5px; max-width:calc(100vw - 16px); overflow-x:auto; scrollbar-width:none}
+    .nav button{padding:8px 6px; font-size:12px; min-width:0}
     .panel{top:auto; left:12px; right:12px; bottom:78px; width:auto; max-height:52vh;
       /* closed: clear the viewport fully — the panel sits 78px above the
          bottom, so translateY(100% + 24px) alone leaves its title peeking
@@ -58565,7 +58574,10 @@ scene.background = new Color(0x000000);
 scene.fog = new Fog(0x000000, 80, 240);
 
 const camera = new PerspectiveCamera(25, innerWidth / innerHeight, 0.1, 300);
-const portrait = innerWidth < innerHeight;
+/* portrait + hero/intro poses are recomputed on every resize (resize()
+   refreshes them): a phone's viewport changes when the browser chrome
+   shows or hides, and a pose baked at load time goes stale. */
+let portrait = innerWidth < innerHeight;
 /* ---- fit the shop to the viewport, at every aspect ----
    The v2 hero used fixed distances: on a portrait phone the horizontal
    fov is so narrow that only a slice of the sign was visible. Instead,
@@ -58584,7 +58596,7 @@ function heroPose() {
   const d = fitDistance(HERO_BOX.halfW, HERO_BOX.halfH, portrait ? 0.94 : 0.8);
   return { pos: [0, 4.3, d], tgt: [HERO_BOX.cx, HERO_BOX.cy, HERO_BOX.cz] };
 }
-const OVERVIEW = heroPose();
+let OVERVIEW = heroPose();
 /* intro: the full-shop framing on all sizes, aimed low so the sign rides
    into the top third and the centered start title falls over the
    window/door band instead of the sign text (the hero aim puts the sign
@@ -58595,7 +58607,7 @@ function introPose() {
   const d = Math.hypot(h.pos[0] - h.tgt[0], h.pos[1] - h.tgt[1], h.pos[2] - h.tgt[2]) * 1.3;
   return { pos: [0, 3.0, d], tgt: [0, 2.0, 0] };
 }
-const INTRO = introPose();
+let INTRO = introPose();
 camera.position.set(...INTRO.pos);
 
 // night-first lighting: dim cool moon for shape, warm interior + neon do the work
@@ -59270,8 +59282,11 @@ function fitGlbPizza(obj, targetRadius) {
   return obj;
 }
 function swapPizza(group, gltfScene) {
+  // fit FIRST, then swap: if measuring the model throws, the code-built
+  // fallback pizza stays instead of leaving the group empty
+  const fitted = fitGlbPizza(gltfScene, group.userData.radius);
   while (group.children.length) group.remove(group.children[0]);
-  group.add(fitGlbPizza(gltfScene, group.userData.radius));
+  group.add(fitted);
 }
 try {
   const draco = new DRACOLoader();
@@ -59283,9 +59298,9 @@ try {
       swapPizza(heroPizza, gltf.scene);
       swapPizza(peelPizza, gltf.scene.clone(true));
       glbPizzaLoaded = true;
-    } catch (e) { /* keep the code-built pizzas */ }
-  }, undefined, () => { /* load failed: keep the code-built pizzas */ });
-} catch (e) { /* loader unavailable: keep the code-built pizzas */ }
+    } catch (e) { console.warn('pizza glb swap failed, keeping code-built pizza', e && e.message); }
+  }, undefined, (err) => { console.warn('pizza glb load failed, keeping code-built pizza', err && err.message); });
+} catch (e) { console.warn('pizza loader unavailable, keeping code-built pizza', e && e.message); }
 
 /* ---------------- props ---------------- */
 // bench in front of the window (like the real shop)
@@ -59531,6 +59546,9 @@ function toast(msg, ms = 3600) {
 function closePanels() {
   Object.values(panels).forEach(p => p.classList.remove('open'));
 }
+/* a station tapped mid-glide is queued and runs when the glide lands —
+   taps during the Enter fade/glide used to be silently dropped */
+let pendingStation = null;
 function flyTo(pos, tgt, dur, done, direct) {
   orbit.locked = true;
   const p0 = camera.position.clone(), t0 = orbit.target.clone();
@@ -59544,6 +59562,7 @@ function flyTo(pos, tgt, dur, done, direct) {
     orbit.goalTarget.copy(t1);
     orbit.locked = false;
     done && done();
+    if (pendingStation) { const next = pendingStation; pendingStation = null; goStation(next); }
   };
   if (direct) {
     // straight glide, no swing-out — used to pass through the door
@@ -59570,7 +59589,7 @@ function flyTo(pos, tgt, dur, done, direct) {
   });
 }
 function goStation(name) {
-  if (orbit.locked) return;
+  if (orbit.locked) { pendingStation = name; return; }
   ding();
   closePanels();
   if (name === 'back') {
@@ -59588,7 +59607,7 @@ function goStation(name) {
   navBtns.forEach(b => b.classList.toggle('on', b.dataset.station === name));
   hintEl.classList.add('gone');
   orbit.minR = name === 'visit' ? 2.5 : 12; // inside the shop, zoom stays small
-  const openPanel = () => { if (st.panel) panels[st.panel].classList.add('open'); };
+  const openPanel = () => { if (station === name && st.panel) panels[st.panel].classList.add('open'); };
   if (st.via) {
     // Visit steps inside: glide to the door, then straight through it
     flyTo(st.via.pos, st.via.tgt, 1.0, () => flyTo(st.pos, st.tgt, 1.2, openPanel, true), true);
@@ -59638,23 +59657,47 @@ document.getElementById('enterBtn').addEventListener('click', () => {
   ding();
   flyTo(OVERVIEW.pos, OVERVIEW.tgt, 3.2, () => {
     setTimeout(() => hintEl.classList.add('gone'), 9000);
-  });
+  }, true); // direct: glide straight in — the two-step dolly swings away
+  // first, which read on the phone as the tap doing nothing
 });
 
 /* ---------------- resize ---------------- */
 function resize() {
   const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h, false);
+  // updateStyle=true: three.js sets the canvas style width/height explicitly.
+  // With false the canvas kept its intrinsic (drawing-buffer) size, which at
+  // devicePixelRatio 2 is 2x the viewport — only the top-left quarter showed,
+  // so the shop sat low and cut on a real phone while DPR-1 headless tests
+  // passed by coincidence (buffer == viewport there).
+  renderer.setSize(w, h, true);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  portrait = w < h;
+  OVERVIEW = heroPose();
+  INTRO = introPose();
   // a rotation or window change re-fits the hero so the shop stays in frame
-  if (started && !station && !orbit.locked) {
+  if (!started && !station) {
+    // before Enter the camera sits at the intro pose: snap it to the fresh
+    // one, so a viewport change (browser chrome showing/hiding) re-frames it
+    camera.position.set(...INTRO.pos);
+    orbit.target.set(...INTRO.tgt);
+    orbit.goalTarget.copy(orbit.target);
+    const off = camera.position.clone().sub(orbit.target);
+    orbit.radius = off.length(); orbit.goalRadius = orbit.radius;
+    orbit.theta = Math.atan2(off.x, off.z); orbit.goalTheta = orbit.theta;
+    orbit.phi = Math.acos(Math.max(-1, Math.min(1, off.y / orbit.radius)));
+    orbit.goalPhi = orbit.phi;
+    camera.lookAt(orbit.target);
+  } else if (started && !station && !orbit.locked) {
     const h0 = heroPose();
     orbit.goalTarget.set(h0.tgt[0], h0.tgt[1], h0.tgt[2]);
     orbit.goalRadius = Math.hypot(h0.pos[0] - h0.tgt[0], h0.pos[1] - h0.tgt[1], h0.pos[2] - h0.tgt[2]);
   }
 }
 addEventListener('resize', resize);
+// mobile chrome showing/hiding fires visualViewport resize more reliably
+// than window resize — re-fit on that too
+if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 resize();
 
 /* ---------------- render loop ---------------- */
@@ -59760,12 +59803,17 @@ window.__cifellis = {
   get camPos() { return camera.position.toArray(); },
   get camTgt() { return orbit.target.toArray(); },
   get glbPizza() { return glbPizzaLoaded; },
-  // debug: peel pizza state (child count + world position + size)
+  // debug: peel pizza state (child count + world position + size + toss count)
   peelPizzaInfo() {
     const b = new Box3().setFromObject(peelPizza);
     const c = new Vector3(); b.getCenter(c);
     const s = new Vector3(); b.getSize(s);
-    return { children: peelPizza.children.length, center: c.toArray().map(v => +v.toFixed(2)), size: s.toArray().map(v => +v.toFixed(2)) };
+    return { children: peelPizza.children.length, center: c.toArray().map(v => +v.toFixed(2)), size: s.toArray().map(v => +v.toFixed(2)), spins: peelPizza.userData.spins || 0 };
+  },
+  // project a world point to NDC — the "pizza is on screen" assertion
+  project(x, y, z) {
+    const v = new Vector3(x, y, z).project(camera);
+    return [+v.x.toFixed(3), +v.y.toFixed(3)];
   },
   // project the shop's outer corners to NDC for the hero-fit assertions
   shopBounds() {
